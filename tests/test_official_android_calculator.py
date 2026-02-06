@@ -18,58 +18,6 @@ class TestOfficialAndroidCalculator:
     PKG = "com.google.android.calculator"
     APK_PATH = "demo_apps/com.google.android.calculator.apk"
     
-    @pytest.fixture(scope="class")
-    def calculator_setup(self):
-        """计算器应用设置 - 支持云平台"""
-        # 使用云平台设备连接
-        device_uri = Config.get_device_uri()
-        print(f"🔗 云平台设备连接: {device_uri}")
-        
-        # 连接设备
-        auto_setup(
-            __file__, 
-            logdir=True, 
-            devices=[device_uri]
-        )
-        
-        device_obj = device()
-        
-        # 云平台设备初始化
-        if Config.is_cloud_platform():
-            print("☁️ 云平台设备初始化...")
-            sleep(2)
-        
-        # 检查并安装APK（云平台可能已预装）
-        if self.PKG not in device_obj.list_app():
-            apk_path = Path(self.APK_PATH)
-            if apk_path.exists():
-                print(f"📱 安装计算器APK: {apk_path}")
-                device_obj.install_app(str(apk_path))
-            else:
-                # 云平台可能不需要安装，应用已预装
-                if Config.is_cloud_platform():
-                    print("☁️ 云平台应用可能已预装")
-                else:
-                    raise FileNotFoundError(f"APK文件不存在: {apk_path}")
-        
-        # 启动应用
-        stop_app(self.PKG)
-        start_app(self.PKG)
-        
-        # 云平台可能需要更长的启动时间
-        if Config.is_cloud_platform():
-            sleep(3)
-        else:
-            sleep(2)
-        
-        # 初始化AndroidUiautomationPoco
-        poco = AndroidUiautomationPoco()
-        
-        yield device_obj, poco
-        
-        # 清理
-        stop_app(self.PKG)
-    
     @pytest.mark.smoke
     @pytest.mark.cloud  # 标记为云平台测试
     def test_app_installation_and_launch(self, calculator_setup):

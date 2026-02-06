@@ -21,12 +21,9 @@ class TestOfficialUnityDemo:
     TEMPLATE_PATH = "demo_apps/tpl1522812811402.png"
     
     @pytest.fixture(scope="class")
-    def unity_demo_setup(self):
+    def unity_demo_setup(self, global_device_setup):
         """Unity Demo应用设置"""
-        # 连接设备 - 使用官方的auto_setup
-        auto_setup(__file__)
-        
-        device_obj = device()
+        device_obj = global_device_setup
         
         # 检查并安装APK - 官方逻辑
         if self.PKG not in device_obj.list_app():

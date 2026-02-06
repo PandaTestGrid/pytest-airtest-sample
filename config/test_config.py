@@ -104,15 +104,15 @@ class Config:
         if cls.CLOUD_PLATFORM != "local":
             # 云平台设备连接
             if cls.DEVICE_ID:
-                return f"{cls.DEVICE_PLATFORM.lower()}:///{cls.DEVICE_ID}"
+                return f"Android:///{cls.DEVICE_ID}"
             else:
-                return f"{cls.DEVICE_PLATFORM.lower()}:///"
+                return "Android:///"
         else:
-            # 本地设备连接
+            # 本地设备连接 - 使用正确的Airtest格式
             if cls.DEVICE_ID:
-                return f"{cls.DEVICE_PLATFORM.lower()}://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}/{cls.DEVICE_ID}?touch_method=MAXTOUCH"
+                return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}/{cls.DEVICE_ID}"
             else:
-                return f"{cls.DEVICE_PLATFORM.lower()}://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}/?touch_method=MAXTOUCH"
+                return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}"
     
     @classmethod
     def is_cloud_platform(cls) -> bool:

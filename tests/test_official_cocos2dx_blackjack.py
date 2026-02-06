@@ -23,12 +23,9 @@ class TestOfficialCocos2dxBlackjack:
     TEMPLATE_CHIP = "demo_apps/tpl1499240490986.png"   # 筹码
     
     @pytest.fixture(scope="class")
-    def blackjack_setup(self):
+    def blackjack_setup(self, global_device_setup):
         """黑杰克游戏应用设置"""
-        # 连接设备
-        auto_setup(__file__)
-        
-        device_obj = device()
+        device_obj = global_device_setup
         
         # 检查并安装APK - 官方逻辑
         if self.PKG not in device_obj.list_app():

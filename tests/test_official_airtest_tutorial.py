@@ -24,12 +24,9 @@ class TestOfficialAirtestTutorial:
     TEMPLATE_LEVEL_20_VERIFY = "demo_apps/tpl1530604090919.png" # 第20关验证
     
     @pytest.fixture(scope="class")
-    def tutorial_setup(self):
+    def tutorial_setup(self, global_device_setup):
         """教程应用设置"""
-        # 连接设备 - 使用官方的auto_setup
-        auto_setup(__file__)
-        
-        device_obj = device()
+        device_obj = global_device_setup
         
         yield device_obj
         

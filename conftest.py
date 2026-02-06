@@ -25,36 +25,68 @@ def setup_test_environment():
     print("✅ 测试环境清理完成")
 
 
-@pytest.fixture(scope="class")
-def cloud_device_setup():
-    """设备连接设置"""
-    try:
-        # 获取设备连接URI
-        device_uri = Config.get_device_uri()
-        print(f"🔗 连接设备: {device_uri}")
-        
-        # 连接设备
-        auto_setup(__file__, logdir=True, devices=[device_uri])
-        device_obj = device()
-        
-        if device_obj:
-            print(f"✅ 设备连接成功")
-        else:
-            raise Exception("设备连接失败")
-        
-        yield device_obj
-        
-    except Exception as e:
-        print(f"❌ 设备连接失败: {e}")
-        raise
-    finally:
-        print("🔌 设备连接清理完成")
+@pytest.fixture(scope="session")
+def global_device_setup():
+    """全局设备连接设置 - 整个测试会话只连接一次"""
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            # 获取设备连接URI
+            device_uri = Config.get_device_uri()
+            print(f"🔗 全局设备连接 (尝试 {attempt + 1}/{max_retries}): {device_uri}")
+            
+            # 使用auto_setup进行全局设备连接
+            auto_setup(__file__, logdir=True, devices=[device_uri])
+            device_obj = device()
+            
+            if device_obj:
+                print(f"✅ 全局设备连接成功")
+                # 验证设备是否可用
+                try:
+                    # 简单的设备验证
+                    device_obj.get_display_info()
+                    print(f"✅ 设备验证通过")
+                    yield device_obj
+                    return
+                except Exception as e:
+                    print(f"⚠️ 设备验证失败: {e}")
+                    if attempt < max_retries - 1:
+                        print(f"🔄 {retry_delay}秒后重试...")
+                        sleep(retry_delay)
+                        continue
+                    else:
+                        raise
+            else:
+                raise Exception("设备对象为空")
+                
+        except Exception as e:
+            print(f"❌ 设备连接失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                print(f"🔄 {retry_delay}秒后重试...")
+                sleep(retry_delay)
+            else:
+                # 最后一次尝试失败，提供更详细的错误信息
+                if Config.is_cloud_platform():
+                    print("☁️ 云平台连接失败，请检查:")
+                    print("  1. DEVICE_ID 是否正确")
+                    print("  2. CLOUD_TOKEN 是否有效")
+                    print("  3. 云平台设备是否在线")
+                else:
+                    print("🏠 本地设备连接失败，请检查:")
+                    print("  1. 设备是否连接并开启USB调试")
+                    print("  2. ADB是否正常工作")
+                    print("  3. 运行 'adb devices' 检查设备列表")
+                raise
+    
+    print("🔌 全局设备连接清理完成")
 
 
 @pytest.fixture(scope="class")
-def calculator_setup(cloud_device_setup):
+def calculator_setup(global_device_setup):
     """计算器应用设置fixture"""
-    device_obj = cloud_device_setup
+    device_obj = global_device_setup
     
     # 计算器应用配置
     calculator_pkg = "com.google.android.calculator"
@@ -94,9 +126,9 @@ def calculator_setup(cloud_device_setup):
 
 
 @pytest.fixture(scope="class")
-def unity_setup(cloud_device_setup):
+def unity_setup(global_device_setup):
     """Unity应用设置fixture"""
-    device_obj = cloud_device_setup
+    device_obj = global_device_setup
     
     # Unity应用包名
     unity_pkg = "com.NetEase.PocoDemo"
@@ -139,9 +171,14 @@ def screenshot_on_failure(request):
             screenshot_path = os.path.join("reports/screenshots", screenshot_name)
             
             try:
-                # 截图
-                snapshot(screenshot_path)
-                print(f"📸 失败截图已保存: {screenshot_path}")
+                # 确保设备连接存在
+                device_obj = device()
+                if device_obj:
+                    # 截图
+                    snapshot(screenshot_path)
+                    print(f"📸 失败截图已保存: {screenshot_path}")
+                else:
+                    print("⚠️ 设备未连接，无法截图")
             except Exception as e:
                 print(f"❌ 截图失败: {e}")
 
@@ -160,6 +197,10 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "cloud: 云平台专用测试")
     config.addinivalue_line("markers", "local: 本地设备专用测试")
     config.addinivalue_line("markers", "retry: 支持重试的测试")
+    config.addinivalue_line("markers", "smoke: 冒烟测试")
+    config.addinivalue_line("markers", "regression: 回归测试")
+    config.addinivalue_line("markers", "ui: UI测试")
+    config.addinivalue_line("markers", "stress: 压力测试")
 
 
 def pytest_collection_modifyitems(config, items):
