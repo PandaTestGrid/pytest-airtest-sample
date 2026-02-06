@@ -17,8 +17,12 @@ class Config:
     DEVICE_HOST = os.getenv("DEVICE_HOST", "127.0.0.1")  # 设备连接主机
     DEVICE_PORT = int(os.getenv("DEVICE_PORT", "5037"))  # 设备连接端口
     
+    # 容器环境配置（默认启用）
+    CONTAINER_MODE = os.getenv("CONTAINER_MODE", "true").lower() == "true"  # 默认容器模式
+    DISPLAY = os.getenv("DISPLAY", None)  # X11显示配置
+    
     # 云平台配置
-    CLOUD_PLATFORM = os.getenv("CLOUD_PLATFORM", "local")  # 云平台类型: local/aws/tencent/alibaba
+    CLOUD_PLATFORM = os.getenv("CLOUD_PLATFORM", "local")  # 云平台类型: local/aws/tencent/alibaba/container
     CLOUD_TOKEN = os.getenv("CLOUD_TOKEN", None)  # 云平台访问令牌
     CLOUD_PROJECT_ID = os.getenv("CLOUD_PROJECT_ID", None)  # 云平台项目ID
     
@@ -96,23 +100,16 @@ class Config:
     
     @classmethod
     def get_device_uri(cls) -> str:
-        """获取设备连接URI
+        """获取设备连接URI - 默认容器优化配置
         
         Returns:
             设备连接字符串
         """
-        if cls.CLOUD_PLATFORM != "local":
-            # 云平台设备连接
-            if cls.DEVICE_ID:
-                return f"Android:///{cls.DEVICE_ID}"
-            else:
-                return "Android:///"
+        # 默认使用容器优化配置（JAVACAP + ADBTOUCH）
+        if cls.DEVICE_ID:
+            return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}/{cls.DEVICE_ID}?cap_method=JAVACAP&touch_method=ADBTOUCH"
         else:
-            # 本地设备连接 - 使用正确的Airtest格式
-            if cls.DEVICE_ID:
-                return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}/{cls.DEVICE_ID}"
-            else:
-                return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}"
+            return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}?cap_method=JAVACAP&touch_method=ADBTOUCH"
     
     @classmethod
     def is_cloud_platform(cls) -> bool:
@@ -124,16 +121,22 @@ class Config:
         return cls.CLOUD_PLATFORM != "local"
     
     @classmethod
+    def is_container_mode(cls) -> bool:
+        """判断是否为容器环境
+        
+        Returns:
+            是否为容器环境
+        """
+        return cls.CONTAINER_MODE
+    
+    @classmethod
     def print_config(cls) -> None:
         """打印当前配置信息"""
-        print("=== 云真机测试平台配置 ===")
-        print(f"设备平台: {cls.DEVICE_PLATFORM}")
+        print("=== Airtest 测试框架配置 ===")
         print(f"设备ID: {cls.DEVICE_ID or '自动检测'}")
-        print(f"云平台: {cls.CLOUD_PLATFORM}")
         print(f"应用包名: {cls.APP_PACKAGE}")
         print(f"设备URI: {cls.get_device_uri()}")
         print(f"测试超时: {cls.TEST_TIMEOUT}秒")
-        print(f"重试次数: {cls.TEST_RETRY_COUNT}")
         print("=" * 30)
 
 

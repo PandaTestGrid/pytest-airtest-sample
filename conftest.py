@@ -27,88 +27,57 @@ def setup_test_environment():
 
 @pytest.fixture(scope="session")
 def global_device_setup():
-    """全局设备连接设置 - 整个测试会话只连接一次"""
+    """全局设备连接设置"""
     max_retries = 3
     retry_delay = 2
     
     for attempt in range(max_retries):
         try:
-            # 获取设备连接URI
             device_uri = Config.get_device_uri()
-            print(f"🔗 全局设备连接 (尝试 {attempt + 1}/{max_retries}): {device_uri}")
-            
-            # 使用auto_setup进行全局设备连接
             auto_setup(__file__, logdir=True, devices=[device_uri])
             device_obj = device()
             
             if device_obj:
-                print(f"✅ 全局设备连接成功")
-                # 验证设备是否可用
-                try:
-                    # 简单的设备验证
-                    device_obj.get_display_info()
-                    print(f"✅ 设备验证通过")
-                    yield device_obj
-                    return
-                except Exception as e:
-                    print(f"⚠️ 设备验证失败: {e}")
-                    if attempt < max_retries - 1:
-                        print(f"🔄 {retry_delay}秒后重试...")
-                        sleep(retry_delay)
-                        continue
-                    else:
-                        raise
+                # 验证设备可用性
+                device_obj.get_display_info()
+                yield device_obj
+                return
             else:
                 raise Exception("设备对象为空")
                 
         except Exception as e:
-            print(f"❌ 设备连接失败 (尝试 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
-                print(f"🔄 {retry_delay}秒后重试...")
                 sleep(retry_delay)
             else:
-                # 最后一次尝试失败，提供更详细的错误信息
-                if Config.is_cloud_platform():
-                    print("☁️ 云平台连接失败，请检查:")
-                    print("  1. DEVICE_ID 是否正确")
-                    print("  2. CLOUD_TOKEN 是否有效")
-                    print("  3. 云平台设备是否在线")
-                else:
-                    print("🏠 本地设备连接失败，请检查:")
-                    print("  1. 设备是否连接并开启USB调试")
-                    print("  2. ADB是否正常工作")
-                    print("  3. 运行 'adb devices' 检查设备列表")
+                print(f"❌ 设备连接失败: {e}")
+                print("请检查:")
+                print("  1. 设备是否连接并开启USB调试")
+                print("  2. ADB是否正常工作")
+                print("  3. 运行 'adb devices' 检查设备列表")
                 raise
-    
-    print("🔌 全局设备连接清理完成")
 
 
 @pytest.fixture(scope="class")
 def calculator_setup(global_device_setup):
-    """计算器应用设置fixture"""
+    """计算器应用设置"""
     device_obj = global_device_setup
     
-    # 计算器应用配置
     calculator_pkg = "com.google.android.calculator"
     calculator_apk = "demo_apps/com.google.android.calculator.apk"
     
     try:
-        # 检查应用是否已安装
+        # 检查并安装应用
         if calculator_pkg not in device_obj.list_app():
             apk_path = Path(calculator_apk)
             if apk_path.exists():
-                print(f"📱 安装计算器APK: {apk_path}")
                 device_obj.install_app(str(apk_path))
-            else:
-                print(f"⚠️ APK文件不存在: {apk_path}")
         
-        # 启动计算器应用
+        # 启动应用
         stop_app(calculator_pkg)
-        print(f"🧮 启动计算器应用: {calculator_pkg}")
         start_app(calculator_pkg)
         sleep(2)
         
-        # 初始化AndroidUiautomationPoco
+        # 初始化Poco
         poco = AndroidUiautomationPoco()
         
         yield device_obj, poco
@@ -117,28 +86,24 @@ def calculator_setup(global_device_setup):
         print(f"❌ 计算器应用设置失败: {e}")
         raise
     finally:
-        # 清理
         try:
             stop_app(calculator_pkg)
-            print("🛑 计算器应用已停止")
         except:
             pass
 
 
 @pytest.fixture(scope="class")
 def unity_setup(global_device_setup):
-    """Unity应用设置fixture"""
+    """Unity应用设置"""
     device_obj = global_device_setup
     
-    # Unity应用包名
     unity_pkg = "com.NetEase.PocoDemo"
     
     try:
         # 启动Unity应用
-        print(f"🎮 启动Unity应用: {unity_pkg}")
         stop_app(unity_pkg)
         start_app(unity_pkg)
-        sleep(5)  # Unity应用需要更长的启动时间
+        sleep(5)
         
         # 初始化Unity Poco
         poco = UnityPoco()
@@ -149,10 +114,8 @@ def unity_setup(global_device_setup):
         print(f"❌ Unity应用设置失败: {e}")
         raise
     finally:
-        # 清理Unity应用
         try:
             stop_app(unity_pkg)
-            print("🛑 Unity应用已停止")
         except:
             pass
 
@@ -164,23 +127,17 @@ def screenshot_on_failure(request):
     
     if hasattr(request.node, 'rep_call') and request.node.rep_call.failed:
         if Config.SCREENSHOT_ON_FAILURE:
-            # 生成截图文件名
             test_name = request.node.name.replace("::", "_").replace("[", "_").replace("]", "_")
             timestamp = int(time.time())
             screenshot_name = f"failure_{test_name}_{timestamp}.png"
             screenshot_path = os.path.join("reports/screenshots", screenshot_name)
             
             try:
-                # 确保设备连接存在
                 device_obj = device()
                 if device_obj:
-                    # 截图
                     snapshot(screenshot_path)
-                    print(f"📸 失败截图已保存: {screenshot_path}")
-                else:
-                    print("⚠️ 设备未连接，无法截图")
-            except Exception as e:
-                print(f"❌ 截图失败: {e}")
+            except Exception:
+                pass
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -201,6 +158,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "regression: 回归测试")
     config.addinivalue_line("markers", "ui: UI测试")
     config.addinivalue_line("markers", "stress: 压力测试")
+    config.addinivalue_line("markers", "performance: 性能测试")
 
 
 def pytest_collection_modifyitems(config, items):
