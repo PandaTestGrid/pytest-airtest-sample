@@ -112,6 +112,19 @@ class Config:
             return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}?cap_method=JAVACAP&touch_method=ADBTOUCH"
     
     @classmethod
+    def get_safe_device_uri(cls) -> str:
+        """获取安全的设备连接URI - 用于容器环境兼容
+        
+        Returns:
+            简化的设备连接字符串
+        """
+        # 容器环境使用更简单的连接方式
+        if cls.DEVICE_ID:
+            return f"Android:///{cls.DEVICE_ID}"
+        else:
+            return "Android:///"
+    
+    @classmethod
     def is_cloud_platform(cls) -> bool:
         """判断是否为云平台环境
         

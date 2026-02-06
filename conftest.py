@@ -1,5 +1,5 @@
 """
-pytest配置文件和全局fixture - 支持云真机测试平台
+pytest配置文件和全局fixture
 """
 
 import pytest
@@ -20,13 +20,17 @@ def setup_test_environment():
     os.makedirs("reports/screenshots", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
     
-    print("✅ 测试环境设置完成")
+    # 设置容器环境优化
+    os.environ.setdefault('AIRTEST_CAP_METHOD', 'JAVACAP')
+    os.environ.setdefault('AIRTEST_TOUCH_METHOD', 'ADBTOUCH')
+    os.environ.setdefault('AIRTEST_NO_MINICAP', '1')
+    os.environ.setdefault('AIRTEST_NO_MINITOUCH', '1')
+    
     yield
-    print("✅ 测试环境清理完成")
 
 
 @pytest.fixture(scope="session")
-def global_device_setup():
+def global_device_setup(setup_test_environment):
     """全局设备连接设置"""
     max_retries = 3
     retry_delay = 2
