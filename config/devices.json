@@ -1,0 +1,38 @@
+{
+  "devices": [
+    {
+      "id": "62f57575",
+      "platform": "android",
+      "status": "device",
+      "name": "Mi 10",
+      "version": "Android 13 (API 33)",
+      "uri": "android://127.0.0.1:5037/62f57575?touch_method=MAXTOUCH"
+    },
+    {
+      "id": "97714122",
+      "platform": "android",
+      "status": "device",
+      "name": "V1838A",
+      "version": "Android 10 (API 29)",
+      "uri": "android://127.0.0.1:5037/97714122?touch_method=MAXTOUCH"
+    },
+    {
+      "id": "UDID",
+      "platform": "ios",
+      "status": "device",
+      "name": "SerialNumber NAME MarketName ProductVersion ConnType",
+      "version": "iOS",
+      "uri": "ios:///UDID"
+    },
+    {
+      "id": "4281dfc2ee581e354ccb2f8ab8b69934a1bea724",
+      "platform": "ios",
+      "status": "device",
+      "name": "G0NVXYQ3JCLG iPhonex iPhone X 16.7.10 ConnectionType.USB",
+      "version": "iOS",
+      "uri": "ios:///4281dfc2ee581e354ccb2f8ab8b69934a1bea724"
+    }
+  ],
+  "default_device": "62f57575",
+  "updated_at": "1770365985.6629782"
+}
