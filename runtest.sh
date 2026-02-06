@@ -108,7 +108,7 @@ fi
 
 # 运行测试
 echo -e "${GREEN}开始运行测试...${NC}"
-pytest "$@"
+pytest --html=reports/report.html --self-contained-html --json-report --json-report-file=reports/report.json "$@"
 
 # 显示结果
 echo -e "${GREEN}测试完成！${NC}"
