@@ -11,44 +11,14 @@ from poco.drivers.android.uiautomation import AndroidUiautomationPoco
 
 
 class TestOfficialCalculator:
-    """官方计算器Demo测试类"""
+    """官方计算器Demo测试类
+    
+    使用 conftest.py 中的 calculator_setup fixture 连接设备，
+    通过 Config.get_device_uri() 动态获取设备地址，兼容本地和云平台环境。
+    """
     
     PKG = "com.google.android.calculator"
     APK_PATH = "demo_apps/com.google.android.calculator.apk"
-    
-    @pytest.fixture(scope="class")
-    def calculator_setup(self):
-        """计算器应用设置"""
-        # 直接使用auto_setup连接设备
-        auto_setup(
-            __file__, 
-            logdir=True, 
-            devices=["android://127.0.0.1:5037/62f57575?touch_method=MAXTOUCH"]
-        )
-        
-        device_obj = device()
-        
-        # 检查并安装APK
-        if self.PKG not in device_obj.list_app():
-            apk_path = Path(self.APK_PATH)
-            if apk_path.exists():
-                print(f"安装计算器APK: {apk_path}")
-                device_obj.install_app(str(apk_path))
-            else:
-                raise FileNotFoundError(f"APK文件不存在: {apk_path}")
-        
-        # 启动应用
-        stop_app(self.PKG)
-        start_app(self.PKG)
-        sleep(2)
-        
-        # 初始化Poco
-        poco = AndroidUiautomationPoco()
-        
-        yield device_obj, poco
-        
-        # 清理
-        stop_app(self.PKG)
     
     @pytest.mark.smoke
     def test_app_installation_and_launch(self, calculator_setup):
