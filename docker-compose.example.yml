@@ -1,0 +1,32 @@
+# Docker Compose 配置示例 - macOS Docker Desktop
+#
+# 使用前确保宿主机 adb server 已启动: adb start-server
+# 不需要 adb -a 监听所有接口，ADB_SERVER_SOCKET 会处理连接
+
+version: '3.8'
+
+services:
+  airtest-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.example
+    container_name: airtest-container
+    environment:
+      # 关键: 让容器内 adb 客户端连接宿主机 adb server
+      - ADB_SERVER_SOCKET=tcp:host.docker.internal:5037
+
+      # 设备配置 (URI 中 host 必须是 host.docker.internal，forward 端口才能通)
+      - DEVICE_HOST=host.docker.internal
+      - DEVICE_PORT=5037
+      - DEVICE_ID=62f57575
+
+      # 测试配置
+      - TEST_TIMEOUT=60
+      - SCREENSHOT_ON_FAILURE=true
+
+    volumes:
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+
+    command: >
+      pytest tests/ -v

@@ -1,0 +1,35 @@
+# Airtest Docker 容器环境
+# 解决 Airtest 在 macOS Docker Desktop (Apple Silicon) 中的兼容性问题:
+#   1. Airtest 内置 adb 是 x86_64，在 arm64 容器中无法运行 → 用系统 adb 替换
+#   2. 容器内 forward 端口在宿主机上 → URI 中指定 host.docker.internal
+#   3. ADB server 在宿主机 → ADB_SERVER_SOCKET 环境变量指向宿主机
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 安装系统依赖（adb 包提供 arm64 原生 adb）
+RUN apt-get update && apt-get install -y \
+    adb \
+    libgl1 \
+    libglib2.0-0 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 Python 依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 让 Airtest 使用系统 arm64 adb，而不是内置的 x86_64 版本
+ENV ANDROID_HOME=/usr/lib/android-sdk
+
+# 环境变量
+ENV PYTHONUNBUFFERED=1
+ENV CONTAINER_MODE=true
+
+# 复制项目
+COPY . .
+RUN mkdir -p reports/screenshots logs
+
+ENTRYPOINT ["pytest"]
+CMD ["--help"]

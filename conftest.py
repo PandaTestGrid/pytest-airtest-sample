@@ -20,11 +20,8 @@ def setup_test_environment():
     os.makedirs("reports/screenshots", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
     
-    # 设置容器环境优化
-    os.environ.setdefault('AIRTEST_CAP_METHOD', 'JAVACAP')
-    os.environ.setdefault('AIRTEST_TOUCH_METHOD', 'ADBTOUCH')
-    os.environ.setdefault('AIRTEST_NO_MINICAP', '1')
-    os.environ.setdefault('AIRTEST_NO_MINITOUCH', '1')
+    # 设置容器环境标记
+    os.environ.setdefault('CONTAINER_MODE', 'true')
     
     yield
 
@@ -33,31 +30,61 @@ def setup_test_environment():
 def global_device_setup(setup_test_environment):
     """全局设备连接设置"""
     max_retries = 3
-    retry_delay = 2
+    retry_delay = 3
+    
+    device_uri = Config.get_device_uri()
+    
+    print(f"\n=== 设备连接信息 ===")
+    print(f"Device URI: {device_uri}")
+    print(f"ADB_SERVER_SOCKET: {os.getenv('ADB_SERVER_SOCKET', '未设置')}")
+    print(f"容器模式: {Config.CONTAINER_MODE}")
     
     for attempt in range(max_retries):
         try:
-            device_uri = Config.get_device_uri()
+            print(f"\n尝试连接设备 ({attempt + 1}/{max_retries})...")
             auto_setup(__file__, logdir=True, devices=[device_uri])
             device_obj = device()
             
             if device_obj:
-                # 验证设备可用性
-                device_obj.get_display_info()
+                display_info = device_obj.get_display_info()
+                print(f"✅ 设备连接成功! 屏幕: {display_info}")
                 yield device_obj
+                
+                # 测试结束后主动清理，避免 atexit 时 logging stream 已关闭导致报错
+                # Airtest 通过 monkey-patch threading._shutdown 注册了 cleanup
+                # 在 pytest 退出前先执行，此时 logging stream 还可用
+                from airtest.core.helper import G
+                from airtest.utils.snippet import CLEANUP_CALLS
+                
+                for dev in G.DEVICE_LIST:
+                    try:
+                        dev.disconnect()
+                    except Exception:
+                        pass
+                G.DEVICE_LIST = []
+                G.DEVICE = None
+                
+                # 清空 cleanup 队列，防止 threading._shutdown 时重复执行报错
+                while not CLEANUP_CALLS.empty():
+                    try:
+                        func, args, kwargs = CLEANUP_CALLS.get_nowait()
+                        func(*args, **kwargs)
+                    except Exception:
+                        pass
                 return
             else:
                 raise Exception("设备对象为空")
                 
         except Exception as e:
+            print(f"⚠️ 第{attempt + 1}次连接失败: {e}")
             if attempt < max_retries - 1:
                 sleep(retry_delay)
             else:
-                print(f"❌ 设备连接失败: {e}")
-                print("请检查:")
-                print("  1. 设备是否连接并开启USB调试")
-                print("  2. ADB是否正常工作")
-                print("  3. 运行 'adb devices' 检查设备列表")
+                print(f"\n❌ 设备连接最终失败: {e}")
+                print("排查步骤:")
+                print(f"  1. 宿主机执行: adb devices (确认设备在线)")
+                print(f"  2. 确认 ADB_SERVER_SOCKET 环境变量已设置")
+                print(f"  3. 确认 DEVICE_HOST 指向宿主机 (macOS用host.docker.internal)")
                 raise
 
 

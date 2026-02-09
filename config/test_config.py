@@ -100,16 +100,27 @@ class Config:
     
     @classmethod
     def get_device_uri(cls) -> str:
-        """获取设备连接URI - 默认容器优化配置
+        """获取设备连接URI
+        
+        容器环境中 DEVICE_HOST 必须指向宿主机地址:
+        - macOS Docker Desktop: host.docker.internal
+        - Linux Docker (host网络): 127.0.0.1
+        - Linux Docker (bridge网络): 172.17.0.1 或宿主机IP
+        
+        URI 中的 host 不仅用于 adb 命令的 -H 参数，
+        还用于 Airtest 连接 forward 端口 (javacap/minicap 等)。
+        容器内 forward 端口在宿主机上，所以 host 必须指向宿主机。
         
         Returns:
             设备连接字符串
         """
-        # 默认使用容器优化配置（JAVACAP + ADBTOUCH）
+        host = cls.DEVICE_HOST
+        port = cls.DEVICE_PORT
+        
         if cls.DEVICE_ID:
-            return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}/{cls.DEVICE_ID}?cap_method=JAVACAP&touch_method=ADBTOUCH"
+            return f"Android://{host}:{port}/{cls.DEVICE_ID}"
         else:
-            return f"Android://{cls.DEVICE_HOST}:{cls.DEVICE_PORT}?cap_method=JAVACAP&touch_method=ADBTOUCH"
+            return f"Android://{host}:{port}"
     
     @classmethod
     def get_safe_device_uri(cls) -> str:
